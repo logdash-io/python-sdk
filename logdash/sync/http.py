@@ -10,7 +10,7 @@ class HttpLogSync(LogSync):
     """
     HTTP-based log synchronization implementation.
     
-    Sends logs to the LogDash API via HTTP.
+    Sends logs to the logdash API via HTTP.
     """
     
     def __init__(self, api_key: str, host: str, verbose: bool = False):
@@ -18,8 +18,8 @@ class HttpLogSync(LogSync):
         Initialize an HTTP log sync instance.
         
         Args:
-            api_key: LogDash API key
-            host: LogDash API host
+            api_key: logdash API key
+            host: logdash API host
             verbose: Enable verbose mode
         """
         self.api_key = api_key
@@ -29,7 +29,7 @@ class HttpLogSync(LogSync):
 
     def send(self, message: str, level: LogLevel, created_at: str) -> None:
         """
-        Send a log message to the LogDash API.
+        Send a log message to the logdash API.
         
         Args:
             message: The log message content

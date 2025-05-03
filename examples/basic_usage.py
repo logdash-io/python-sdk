@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Basic usage example for the LogDash SDK.
+Basic usage example for the logdash SDK.
 """
 
 import time
@@ -8,8 +8,8 @@ from logdash import create_logdash
 
 
 def main():
-    """Main function demonstrating LogDash usage."""
-    # Initialize LogDash with your API key
+    """Main function demonstrating logdash usage."""
+    # Initialize logdash with your API key
     # For testing without an API key, logs will only be printed locally
     logdash = create_logdash({
         "api_key": "your-api-key",  # Replace with your actual API key
@@ -18,10 +18,10 @@ def main():
     })
 
     # Get the logger instance
-    logger = logdash["logger"]
+    logger = logdash.logger
     
     # Get the metrics instance
-    metrics = logdash["metrics"]
+    metrics = logdash.metrics
     
     # Log messages at different levels
     logger.info("Application started")

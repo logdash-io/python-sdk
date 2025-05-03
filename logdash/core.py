@@ -1,7 +1,7 @@
-"""Core functionality for the LogDash SDK."""
+"""Core functionality for the logdash SDK."""
 
 from datetime import datetime
-from typing import Dict, Optional, Any, TypedDict
+from typing import Dict, Optional, Any
 
 from logdash.logger import Logger
 from logdash.metrics.base import BaseMetrics
@@ -10,24 +10,54 @@ from logdash.sync.factory import create_log_sync
 from logdash.constants import LogLevel
 
 
-class LogdashInstance(TypedDict):
-    """Return type for create_logdash containing logger and metrics instances."""
-    logger: Logger
-    metrics: BaseMetrics
+class logdash:
+    def __init__(self, api_key: Optional[str] = None, host: str = "https://api.logdash.io", verbose: bool = False):
+        """
+        Initialize a new logdash instance.
+        
+        Args:
+            api_key: Your logdash API key
+            host: logdash API host (defaults to https://api.logdash.io)
+            verbose: Enable verbose mode
+        """
+        # Ensure we have an API key (or empty string)
+        self._api_key = api_key or ""
+        self._host = host
+        self._verbose = verbose
+        
+        # Create log sync and metrics instances
+        self._log_sync = create_log_sync(self._api_key, self._host, self._verbose)
+        self._metrics_instance = create_metrics(self._api_key, self._host, self._verbose)
+
+        # Initialize logger
+        def on_log(level: LogLevel, message: str) -> None:
+            self._log_sync.send(message, level, datetime.now().isoformat())
+            
+        self._logger_instance = Logger(log_method=print, on_log=on_log)
+    
+    @property
+    def logger(self) -> Logger:
+        """Get the logger instance."""
+        return self._logger_instance
+    
+    @property
+    def metrics(self) -> BaseMetrics:
+        """Get the metrics instance."""
+        return self._metrics_instance
 
 
-def create_logdash(params: Optional[Dict[str, Any]] = None) -> LogdashInstance:
+def create_logdash(params: Optional[Dict[str, Any]] = None) -> logdash:
     """
-    Create a new LogDash instance with logger and metrics.
+    Create a new logdash instance with logger and metrics.
     
     Args:
         params: Optional dictionary with configuration parameters:
-               - api_key: Your LogDash API key
-               - host: LogDash API host (defaults to https://api.logdash.io)
+               - api_key: Your logdash API key
+               - host: logdash API host (defaults to https://api.logdash.io)
                - verbose: Enable verbose mode
                
     Returns:
-        A dictionary containing logger and metrics instances
+        A logdash instance with logger and metrics properties
     """
     # Initialize with default values
     api_key = None
@@ -40,18 +70,4 @@ def create_logdash(params: Optional[Dict[str, Any]] = None) -> LogdashInstance:
         host = params.get("host", host)
         verbose = params.get("verbose", verbose)
     
-    # Ensure we have an API key
-    api_key = api_key or ""
-    
-    # Create log sync and metrics instances
-    log_sync = create_log_sync(api_key, host, verbose)
-    metrics = create_metrics(api_key, host, verbose)
-
-    # Callback for logging
-    def on_log(level: LogLevel, message: str) -> None:
-        log_sync.send(message, level, datetime.now().isoformat())
-
-    return {
-        "logger": Logger(log_method=print, on_log=on_log),
-        "metrics": metrics,
-    } 
+    return logdash(api_key, host, verbose) 

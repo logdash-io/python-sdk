@@ -11,7 +11,7 @@ class Metrics(BaseMetrics):
     """
     HTTP-based metrics implementation.
     
-    Sends metrics to the LogDash API via HTTP.
+    Sends metrics to the logdash API via HTTP.
     """
     
     def __init__(self, api_key: str, host: str, verbose: bool = False):
@@ -19,8 +19,8 @@ class Metrics(BaseMetrics):
         Initialize a metrics instance.
         
         Args:
-            api_key: LogDash API key
-            host: LogDash API host
+            api_key: logdash API key
+            host: logdash API host
             verbose: Enable verbose mode
         """
         self.api_key = api_key
@@ -55,7 +55,7 @@ class Metrics(BaseMetrics):
         
     def _send_metric(self, name: str, value: float, operation: MetricOperation) -> None:
         """
-        Send a metric to the LogDash API.
+        Send a metric to the logdash API.
         
         Args:
             name: The metric name

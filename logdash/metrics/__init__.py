@@ -1,4 +1,4 @@
-"""Metrics tracking package for LogDash."""
+"""Metrics tracking package for logdash."""
 
 from logdash.metrics.base import BaseMetrics
 from logdash.metrics.impl import Metrics

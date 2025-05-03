@@ -24,7 +24,7 @@ logdash = create_logdash({
 })
 
 # Access the logger
-logger = logdash["logger"]
+logger = logdash.logger
 
 logger.info("Application started successfully")
 logger.error("An unexpected error occurred")
@@ -43,7 +43,7 @@ logdash = create_logdash({
 })
 
 # Access metrics
-metrics = logdash["metrics"]
+metrics = logdash.metrics
 
 # to set absolute value
 metrics.set("users", 0)

@@ -1,20 +1,20 @@
 """
-Setup script for the LogDash package.
+Setup script for the logdash package.
 """
 
 from setuptools import setup, find_packages
 
 setup(
     name="logdash",
-    version="0.1.1",
+    version="0.2.0",
     packages=find_packages(),
     install_requires=[
         "requests>=2.25.0",
         "colorama>=0.4.4",
     ],
-    author="LogDash",
+    author="logdash",
     author_email="info@logdash.io",
-    description="Python SDK for LogDash logging and metrics service",
+    description="Python SDK for logdash logging and metrics service",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     keywords="logging, metrics, monitoring",

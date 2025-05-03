@@ -1,4 +1,4 @@
-"""Internal logging utilities for the LogDash SDK."""
+"""Internal logging utilities for the logdash SDK."""
 
 from logdash.logger import Logger
 

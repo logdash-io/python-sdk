@@ -11,8 +11,8 @@ def create_log_sync(api_key: str, host: str, verbose: bool = False) -> LogSync:
     Create a log sync instance based on the provided parameters.
     
     Args:
-        api_key: LogDash API key
-        host: LogDash API host
+        api_key: logdash API key
+        host: logdash API host
         verbose: Enable verbose mode
         
     Returns:

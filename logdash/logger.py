@@ -1,4 +1,4 @@
-"""Logger implementation for LogDash."""
+"""Logger implementation for logdash."""
 
 from datetime import datetime
 from typing import Any, Callable, Optional

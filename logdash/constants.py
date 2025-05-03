@@ -1,11 +1,11 @@
-"""Constants used throughout the LogDash SDK."""
+"""Constants used throughout the logdash SDK."""
 
 from enum import Enum
 from colorama import Fore
 
 
 class LogLevel(str, Enum):
-    """Log levels supported by LogDash."""
+    """Log levels supported by logdash."""
     ERROR = "error"
     WARN = "warning"
     INFO = "info"
@@ -16,7 +16,7 @@ class LogLevel(str, Enum):
 
 
 class MetricOperation(str, Enum):
-    """Metric operations supported by LogDash."""
+    """Metric operations supported by logdash."""
     SET = "set"
     CHANGE = "change"
 

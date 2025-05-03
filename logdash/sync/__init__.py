@@ -1,4 +1,4 @@
-"""Log synchronization package for LogDash."""
+"""Log synchronization package for logdash."""
 
 from logdash.sync.base import LogSync
 from logdash.sync.http import HttpLogSync
