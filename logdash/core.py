@@ -1,5 +1,3 @@
-"""Core functionality for the logdash SDK."""
-
 from datetime import datetime
 from typing import Dict, Optional, Any
 
@@ -12,14 +10,6 @@ from logdash.constants import LogLevel
 
 class logdash:
     def __init__(self, api_key: Optional[str] = None, host: str = "https://api.logdash.io", verbose: bool = False):
-        """
-        Initialize a new logdash instance.
-        
-        Args:
-            api_key: Your logdash API key
-            host: logdash API host (defaults to https://api.logdash.io)
-            verbose: Enable verbose mode
-        """
         # Ensure we have an API key (or empty string)
         self._api_key = api_key or ""
         self._host = host

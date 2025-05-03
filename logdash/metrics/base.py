@@ -1,11 +1,7 @@
-"""Base class for metrics implementations."""
-
 from abc import ABC, abstractmethod
 
 
 class BaseMetrics(ABC):
-    """Abstract base class for metrics implementations."""
-    
     @abstractmethod
     def set(self, name: str, value: float) -> None:
         """

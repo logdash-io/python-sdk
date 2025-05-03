@@ -1,5 +1,3 @@
-"""HTTP-based metrics implementation."""
-
 import requests
 
 from logdash.metrics.base import BaseMetrics
@@ -8,21 +6,7 @@ from logdash.internal import internal_logger
 
 
 class Metrics(BaseMetrics):
-    """
-    HTTP-based metrics implementation.
-    
-    Sends metrics to the logdash API via HTTP.
-    """
-    
     def __init__(self, api_key: str, host: str, verbose: bool = False):
-        """
-        Initialize a metrics instance.
-        
-        Args:
-            api_key: logdash API key
-            host: logdash API host
-            verbose: Enable verbose mode
-        """
         self.api_key = api_key
         self.host = host
         self.verbose = verbose
@@ -54,14 +38,6 @@ class Metrics(BaseMetrics):
         self._send_metric(name, value, MetricOperation.CHANGE)
         
     def _send_metric(self, name: str, value: float, operation: MetricOperation) -> None:
-        """
-        Send a metric to the logdash API.
-        
-        Args:
-            name: The metric name
-            value: The metric value
-            operation: The operation to perform
-        """
         # Skip if no API key is provided
         if not self.api_key:
             return
