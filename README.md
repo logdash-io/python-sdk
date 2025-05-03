@@ -59,44 +59,6 @@ To see the logs or metrics, go to your project dashboard
 ![logs](docs/logs.png)
 ![delta](docs/delta.png)
 
-## Configuration
-
-| Parameter | Required | Default                  | Description                                                                                                              |
-| --------- | -------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| `api_key` | no       | -                        | API key used to authorize against logdash servers. If you don't provide one, logs will be logged into local console only |
-| `host`    | no       | `https://api.logdash.io` | Custom API host, useful with self-hosted instances                                                                       |
-| `verbose` | no       | `False`                  | Useful for debugging purposes                                                                                            |
-
-## Log Levels
-
-The logger supports the following log levels:
-
-- error
-- warn
-- info (also available as log())
-- http
-- verbose
-- debug
-- silly
-
-## Local Development
-
-If you don't provide an API key, logs will only be output locally and metrics will not be tracked:
-
-```python
-from logdash import create_logdash
-
-# Local only logger
-logdash = create_logdash()
-logdash["logger"].info("This will only be logged locally")
-```
-
-## Requirements
-
-- Python 3.7+
-- requests
-- colorama
-
 ## License
 
 This project is licensed under the MIT License.
