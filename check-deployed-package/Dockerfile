@@ -4,8 +4,8 @@ WORKDIR /app
 
 RUN pip install logdash
 
-COPY check-deployed-package/demo.py /app/
+COPY check-deployed-package/check.py /app/
 
-RUN chmod +x /app/demo.py
+RUN chmod +x /app/check.py
 
 CMD ["python", "./check.py"] 
