@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Optional, Any
 
 from logdash.logger import Logger
@@ -21,7 +21,8 @@ class logdash:
 
         # Initialize logger
         def on_log(level: LogLevel, message: str) -> None:
-            self._log_sync.send(message, level, datetime.now().isoformat())
+            self._log_sync.send(message, level, datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+)
             
         self._logger_instance = Logger(log_method=print, on_log=on_log)
     

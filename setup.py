@@ -3,10 +3,19 @@ Setup script for the logdash package.
 """
 
 from setuptools import setup, find_packages
+import re
+
+# Read version from __init__.py
+with open('logdash/__init__.py', 'r') as f:
+    version_match = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]', f.read(), re.MULTILINE)
+    if version_match:
+        version = version_match.group(1)
+    else:
+        raise RuntimeError('Cannot find version information')
 
 setup(
     name="logdash",
-    version="0.2.2",
+    version=version,
     packages=find_packages(),
     install_requires=[
         "requests>=2.25.0",
