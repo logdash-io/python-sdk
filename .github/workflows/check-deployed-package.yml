@@ -1,0 +1,23 @@
+name: Check deployed package
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  run-demo:
+    name: Run LogDash Demo
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Make run script executable
+        run: chmod +x check-deployed-package/run.sh
+
+      - name: Run LogDash demo
+        env:
+          LOGDASH_API_KEY: ${{ secrets.LOGDASH_API_KEY }}
+        run: ./check-deployed-package/run.sh
