@@ -24,6 +24,16 @@ jobs:
         run: python -m build
 
       - name: Publish package
+        id: publish
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Check deployed package
+        run: |
+          # Wait a moment for PyPI to process the upload
+          sleep 30
+          PACKAGE_NAME=$(grep -oP "name\s*=\s*['\"](\K[^'\"]+)" setup.py || echo "logdash")
+          VERSION=$(grep -oP "__version__\s*=\s*['\"](\K[^'\"]+)" logdash/__init__.py)
+          echo "Checking if $PACKAGE_NAME==$VERSION is available on PyPI..."
+          pip install $PACKAGE_NAME==$VERSION
