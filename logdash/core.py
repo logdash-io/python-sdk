@@ -1,3 +1,4 @@
+import threading
 from datetime import datetime, timezone
 from typing import Dict, Optional, Any
 
@@ -21,8 +22,12 @@ class logdash:
 
         # Initialize logger
         def on_log(level: LogLevel, message: str) -> None:
-            self._log_sync.send(message, level, datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
-)
+            # Send log in background thread to avoid blocking
+            def send_log():
+                self._log_sync.send(message, level, datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'))
+            
+            thread = threading.Thread(target=send_log, daemon=True)
+            thread.start()
             
         self._logger_instance = Logger(log_method=print, on_log=on_log)
     
