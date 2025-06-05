@@ -6,7 +6,7 @@ LOGS_SEED=$(openssl rand -hex 2 | cut -c1-5)
 echo "Generated seed: $LOGS_SEED"
 
 # Generate random metrics seed (1-1,000,000)
-METRICS_SEED=$(jot -r 1 1 1000000)
+METRICS_SEED=$((1 + $RANDOM % 1000000))
 echo "Generated metrics seed: $METRICS_SEED"
 
 echo "Building LogDash demo Docker image (using published package)..."
