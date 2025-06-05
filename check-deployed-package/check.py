@@ -49,4 +49,4 @@ metrics.mutate('users', 1)
 
 
 # Wait to ensure data is sent
-time.sleep(1) 
+time.sleep(2) 
