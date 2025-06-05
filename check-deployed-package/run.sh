@@ -109,7 +109,7 @@ if ! echo "$METRICS_RESPONSE" | grep -q '"name":"users"'; then
 fi
 
 # Extract the value of the users metric and check if it matches expected value
-USERS_VALUE=$(echo "$METRICS_RESPONSE" | grep -A 10 '"name":"users"' | grep -o '"value":[0-9]*' | sed 's/"value"://')
+USERS_VALUE=$(echo "$METRICS_RESPONSE" | sed -n '/"name":"users"/,/"value":[0-9]*/p' | grep -o '"value":[0-9]*' | sed 's/"value"://' | head -1)
 
 if [ "$USERS_VALUE" != "$EXPECTED_USERS_VALUE" ]; then
     echo "Error: Users metric value mismatch. Expected: $EXPECTED_USERS_VALUE, Found: $USERS_VALUE"
