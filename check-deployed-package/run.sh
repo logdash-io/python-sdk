@@ -29,18 +29,16 @@ echo "Demo completed!"
 echo
 echo "Authenticating with LogDash API..."
 
-# Authenticate with API using the API key
-AUTH_RESPONSE=$(curl -s -X 'POST' \
-  'https://api.logdash.io/auth/api-key' \
+# Identify the project via the read-only personal API key (whoami).
+# The ingest key (LOGDASH_API_KEY) is write-only and is no longer exchangeable for a token.
+TOKEN="${LOGDASH_PERSONAL_API_KEY}"
+AUTH_RESPONSE=$(curl -s -X 'GET' \
+  'https://api.logdash.io/personal-api-keys/whoami' \
   -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d "{
-  \"apiKey\": \"${LOGDASH_API_KEY}\"
-}")
+  -H "Authorization: Bearer ${TOKEN}")
 
-# Extract token and projectId from response
-TOKEN=$(echo "$AUTH_RESPONSE" | grep -o '"token":"[^"]*"' | sed 's/"token":"\(.*\)"/\1/')
-PROJECT_ID=$(echo "$AUTH_RESPONSE" | grep -o '"projectId":"[^"]*"' | sed 's/"projectId":"\(.*\)"/\1/')
+# The key is scoped to a single project; whoami returns it under access.ids.
+PROJECT_ID=$(echo "$AUTH_RESPONSE" | grep -o '"ids":\[[^]]*\]' | grep -o '"[^"]*"' | head -1 | tr -d '"')
 
 if [ -z "$TOKEN" ] || [ -z "$PROJECT_ID" ]; then
     echo "Error: Failed to authenticate with LogDash API"
@@ -55,7 +53,7 @@ echo "Fetching logs from LogDash API..."
 
 # Fetch logs from the API
 LOGS_RESPONSE=$(curl -s -X 'GET' \
-  "https://api.logdash.io/projects/${PROJECT_ID}/logs?limit=10" \
+  "https://api.logdash.io/projects/${PROJECT_ID}/logs/v2?limit=10" \
   -H 'accept: application/json' \
   -H "Authorization: Bearer ${TOKEN}")
 
