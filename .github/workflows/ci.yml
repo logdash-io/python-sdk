@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # A release in progress must finish; a newer merge waits and releases after it.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# The repository's default token can write; only the release job needs to.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: 3.x
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: pip install build -e .
+      - run: python -m unittest discover -s tests
+      - run: python -m build
+      - run: node --test 'scripts/*.test.ts'
+
+  # The version the merged commits call for; empty when none of them is a feat, fix, perf, or breaking change.
+  version:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      next: ${{ steps.next.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the tags and commits since the last release
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      # Two lines, so a failing script fails the job instead of releasing nothing.
+      - id: next
+        run: |
+          version=$(node scripts/version.ts)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  # Publishes the merge to PyPI as that version.
+  release:
+    needs: [test, version]
+    if: needs.version.outputs.next != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      V: ${{ needs.version.outputs.next }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: 3.x
+      # setup.py reads the version from here.
+      - run: sed -i "s/^__version__ = .*/__version__ = \"$V\"/" logdash/__init__.py
+      - run: pip install build twine && python -m build
+      # Fails before the upload when the version did not reach the packages.
+      - run: ls "dist/logdash-$V.tar.gz" "dist/logdash-$V-py3-none-any.whl"
+      # --skip-existing, so a rerun after a failed release step just tags.
+      - run: twine upload --skip-existing dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      # Last, since it creates the v$V tag the next release counts from.
+      - run: gh release create "v$V" --generate-notes --target "$GITHUB_SHA"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  # Installs the version just published and reads back what it sends.
+  smoke:
+    needs: [version, release]
+    uses: ./.github/workflows/check-deployed-package.yml
+    with:
+      version: ${{ needs.version.outputs.next }}
+    secrets:
+      LOGDASH_API_KEY: ${{ secrets.LOGDASH_API_KEY }}
+      LOGDASH_PERSONAL_API_KEY: ${{ secrets.LOGDASH_PERSONAL_API_KEY }}

@@ -9,8 +9,11 @@ echo "Generated seed: $LOGS_SEED"
 METRICS_SEED=$(awk 'BEGIN{srand(); print int(rand()*1000000)+1}')
 echo "Generated metrics seed: $METRICS_SEED"
 
-echo "Building LogDash demo Docker image (using published package)..."
-docker build --no-cache -t logdash-python-demo -f check-deployed-package/Dockerfile .
+# Every SDK sends to the shared "SDK smoke tests" domain as its own app
+APP=python-sdk
+
+echo "Building LogDash demo Docker image (using published package ${LOGDASH_VERSION:-latest})..."
+docker build --no-cache --build-arg LOGDASH_VERSION="${LOGDASH_VERSION}" -t logdash-python-demo -f check-deployed-package/Dockerfile .
 
 echo
 echo "Running LogDash demo..."
@@ -21,48 +24,34 @@ docker run --rm \
   -e LOGDASH_API_KEY="${LOGDASH_API_KEY}" \
   -e LOGS_SEED="${LOGS_SEED}" \
   -e METRICS_SEED="${METRICS_SEED}" \
+  -e LOGDASH_APP="${APP}" \
   logdash-python-demo
 
 echo
-echo "Demo completed!" 
+echo "Demo completed!"
 
 echo
 echo "Authenticating with LogDash API..."
 
-# Authenticate with API using the API key
-AUTH_RESPONSE=$(curl -s -X 'POST' \
-  'https://api.logdash.io/auth/api-key' \
+# Identify the domain via the read-only personal API key (whoami).
+# The ingest key (LOGDASH_API_KEY) is write-only and is no longer exchangeable for a token.
+TOKEN="${LOGDASH_PERSONAL_API_KEY}"
+AUTH_RESPONSE=$(curl -s -X 'GET' \
+  'https://api.logdash.io/personal-api-keys/whoami' \
   -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d "{
-  \"apiKey\": \"${LOGDASH_API_KEY}\"
-}")
+  -H "Authorization: Bearer ${TOKEN}")
 
-# Extract token and projectId from response
-TOKEN=$(echo "$AUTH_RESPONSE" | grep -o '"token":"[^"]*"' | sed 's/"token":"\(.*\)"/\1/')
-PROJECT_ID=$(echo "$AUTH_RESPONSE" | grep -o '"projectId":"[^"]*"' | sed 's/"projectId":"\(.*\)"/\1/')
+# The key is restricted to the one smoke-test domain; whoami returns it as access { kind: "clusters", ids: [domainId] }.
+DOMAIN_ID=$(echo "$AUTH_RESPONSE" | jq -r 'if .access.kind == "clusters" then .access.ids[0] // empty else empty end' 2>/dev/null || true)
 
-if [ -z "$TOKEN" ] || [ -z "$PROJECT_ID" ]; then
+if [ -z "$TOKEN" ] || [ -z "$DOMAIN_ID" ]; then
     echo "Error: Failed to authenticate with LogDash API"
+    echo "LOGDASH_PERSONAL_API_KEY must be a personal API key (ldp_) with logs:read and metrics:read, restricted to the \"SDK smoke tests\" domain"
     echo "Response: $AUTH_RESPONSE"
     exit 1
 fi
 
-echo "Authentication successful. Project ID: $PROJECT_ID"
-
-echo
-echo "Fetching logs from LogDash API..."
-
-# Fetch logs from the API
-LOGS_RESPONSE=$(curl -s -X 'GET' \
-  "https://api.logdash.io/projects/${PROJECT_ID}/logs?limit=10" \
-  -H 'accept: application/json' \
-  -H "Authorization: Bearer ${TOKEN}")
-
-echo "Logs fetched successfully"
-
-echo
-echo "Validating log messages..."
+echo "Authentication successful. Domain ID: $DOMAIN_ID"
 
 # Expected log messages with seed
 EXPECTED_MESSAGES="This is an info log ${LOGS_SEED}
@@ -74,42 +63,54 @@ This is a silly log ${LOGS_SEED}
 This is an info log ${LOGS_SEED}
 This is a verbose log ${LOGS_SEED}"
 
-# Check if all expected messages are present in the logs
+# Expected users metric value (metrics_seed + 1)
+EXPECTED_USERS_VALUE=$((METRICS_SEED + 1))
+
+echo
+echo "Fetching logs and metrics from LogDash API..."
+
+# The backend stores what it receives about once a second, so read until all of it is there, for up to 30 seconds
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+    LOGS_RESPONSE=$(curl -s -X 'GET' \
+      "https://api.logdash.io/clusters/${DOMAIN_ID}/logs?apps=${APP}&limit=100&searchString=${LOGS_SEED}" \
+      -H 'accept: application/json' \
+      -H "Authorization: Bearer ${TOKEN}")
+    METRICS_RESPONSE=$(curl -s -X 'GET' \
+      "https://api.logdash.io/clusters/${DOMAIN_ID}/metrics" \
+      -H 'accept: application/json' \
+      -H "Authorization: Bearer ${TOKEN}")
+
+    MISSING_MESSAGES=$(echo "$EXPECTED_MESSAGES" | while IFS= read -r expected_msg; do
+        echo "$LOGS_RESPONSE" | grep -q "$expected_msg" || echo "$expected_msg"
+    done)
+    USERS_VALUE=$(echo "$METRICS_RESPONSE" | jq -r --arg app "$APP" '.[] | select(.app == $app and .name == "users") | .value' 2>/dev/null || true)
+
+    [ -z "$MISSING_MESSAGES" ] && [ "$USERS_VALUE" = "$EXPECTED_USERS_VALUE" ] && break
+    sleep 3
+done
+
+echo
+echo "Validating log messages..."
+
+if [ -n "$MISSING_MESSAGES" ]; then
+    echo "Error: Expected log messages not found:"
+    echo "$MISSING_MESSAGES"
+    echo "Logs response: $LOGS_RESPONSE"
+    exit 1
+fi
+
 echo "$EXPECTED_MESSAGES" | while IFS= read -r expected_msg; do
-    if ! echo "$LOGS_RESPONSE" | grep -q "$expected_msg"; then
-        echo "Error: Expected log message not found: '$expected_msg'"
-        echo "Logs response: $LOGS_RESPONSE"
-        exit 1
-    fi
     echo "✓ Found: '$expected_msg'"
 done
 
 echo
-echo "Fetching metrics from LogDash API..."
-
-# Fetch metrics from the API
-METRICS_RESPONSE=$(curl -s -X 'GET' \
-  "https://api.logdash.io/projects/${PROJECT_ID}/metrics" \
-  -H 'accept: application/json' \
-  -H "Authorization: Bearer ${TOKEN}")
-
-echo "Metrics fetched successfully"
-
-echo
 echo "Validating metrics..."
 
-# Expected users metric value (metrics_seed + 1)
-EXPECTED_USERS_VALUE=$((METRICS_SEED + 1))
-
-# Check if users metric exists with correct value
-if ! echo "$METRICS_RESPONSE" | grep -q '"name":"users"'; then
+if [ -z "$USERS_VALUE" ]; then
     echo "Error: Users metric not found"
     echo "Metrics response: $METRICS_RESPONSE"
     exit 1
 fi
-
-# Extract the value of the users metric and check if it matches expected value
-USERS_VALUE=$(echo "$METRICS_RESPONSE" | sed 's/},{/}\n{/g' | grep '"name":"users"' | grep -o '"value":[0-9]*' | sed 's/"value"://')
 
 if [ "$USERS_VALUE" != "$EXPECTED_USERS_VALUE" ]; then
     echo "Error: Users metric value mismatch. Expected: $EXPECTED_USERS_VALUE, Found: $USERS_VALUE"

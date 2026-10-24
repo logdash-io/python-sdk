@@ -3,28 +3,26 @@
 
 import os
 import time
-import pkg_resources
+from importlib.metadata import version
 
 from logdash import create_logdash
 
 print('=== LogDash SDK Demo ===')
 
-try:
-    logdash_version = pkg_resources.get_distribution("logdash").version
-except Exception:
-    logdash_version = "unknown"
-print(f"Using logdash package version: {logdash_version}")
+print(f"Using logdash package version: {version('logdash')}")
 print()
 
 api_key = os.environ.get('LOGDASH_API_KEY')
 logs_seed = os.environ.get('LOGS_SEED', 'default')
 metrics_seed = os.environ.get('METRICS_SEED', '1')
-print(f"Using API Key: {api_key}")
+app = os.environ.get('LOGDASH_APP', 'python-sdk')
+print(f"Using App: {app}")
 print(f"Using Logs Seed: {logs_seed}")
 print(f"Using Metrics Seed: {metrics_seed}")
 
 logdash = create_logdash({
-    "api_key": api_key, 
+    "api_key": api_key,
+    "app": app,
 })
 
 # Get the logger instance

@@ -1,28 +1,34 @@
 name: Check deployed package
 
+# CI runs it after each release, against the version just published; by hand it checks the latest version on PyPI.
 on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+    secrets:
+      LOGDASH_API_KEY:
+        required: true
+      LOGDASH_PERSONAL_API_KEY:
+        required: true
   workflow_dispatch:
-  workflow_run:
-    workflows: ['Publish Package to PyPI']
-    types:
-      - completed
-    branches:
-      - main
+
+permissions:
+  contents: read
 
 jobs:
   run-demo:
     name: Run LogDash Demo
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Make run script executable
-        run: chmod +x check-deployed-package/run.sh
+        uses: actions/checkout@v7
 
       - name: Run LogDash demo
         env:
           LOGDASH_API_KEY: ${{ secrets.LOGDASH_API_KEY }}
+          LOGDASH_PERSONAL_API_KEY: ${{ secrets.LOGDASH_PERSONAL_API_KEY }}
+          LOGDASH_VERSION: ${{ inputs.version }}
         run: ./check-deployed-package/run.sh
