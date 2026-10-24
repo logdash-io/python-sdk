@@ -42,7 +42,7 @@ AUTH_RESPONSE=$(curl -s -X 'GET' \
   -H "Authorization: Bearer ${TOKEN}")
 
 # The key is restricted to the one smoke-test domain; whoami returns it as access { kind: "clusters", ids: [domainId] }.
-DOMAIN_ID=$(echo "$AUTH_RESPONSE" | jq -r 'if .access.kind == "clusters" then .access.ids[0] // empty else empty end' 2>/dev/null)
+DOMAIN_ID=$(echo "$AUTH_RESPONSE" | jq -r 'if .access.kind == "clusters" then .access.ids[0] // empty else empty end' 2>/dev/null || true)
 
 if [ -z "$TOKEN" ] || [ -z "$DOMAIN_ID" ]; then
     echo "Error: Failed to authenticate with LogDash API"
@@ -83,7 +83,7 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do
     MISSING_MESSAGES=$(echo "$EXPECTED_MESSAGES" | while IFS= read -r expected_msg; do
         echo "$LOGS_RESPONSE" | grep -q "$expected_msg" || echo "$expected_msg"
     done)
-    USERS_VALUE=$(echo "$METRICS_RESPONSE" | jq -r --arg app "$APP" '.[] | select(.app == $app and .name == "users") | .value' 2>/dev/null)
+    USERS_VALUE=$(echo "$METRICS_RESPONSE" | jq -r --arg app "$APP" '.[] | select(.app == $app and .name == "users") | .value' 2>/dev/null || true)
 
     [ -z "$MISSING_MESSAGES" ] && [ "$USERS_VALUE" = "$EXPECTED_USERS_VALUE" ] && break
     sleep 3

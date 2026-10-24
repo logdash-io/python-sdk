@@ -68,7 +68,8 @@ jobs:
       - run: pip install build twine && python -m build
       # Fails before the upload when the version did not reach the packages.
       - run: ls "dist/logdash-$V.tar.gz" "dist/logdash-$V-py3-none-any.whl"
-      - run: twine upload dist/*
+      # --skip-existing, so a rerun after a failed release step just tags.
+      - run: twine upload --skip-existing dist/*
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
@@ -83,4 +84,6 @@ jobs:
     uses: ./.github/workflows/check-deployed-package.yml
     with:
       version: ${{ needs.version.outputs.next }}
-    secrets: inherit
+    secrets:
+      LOGDASH_API_KEY: ${{ secrets.LOGDASH_API_KEY }}
+      LOGDASH_PERSONAL_API_KEY: ${{ secrets.LOGDASH_PERSONAL_API_KEY }}

@@ -1,7 +1,7 @@
 // `node scripts/version.ts`: the version the commits since the last release call for, from their
 // Conventional Commit subjects, or nothing when none of them changes the app. CI runs it after each
 // merge to main and releases what it prints. Releases are tagged v<version>; the tags are the
-// source of truth, logdash/__init__.py's version is a placeholder CI overwrites before packaging.
+// source of truth; `__version__` in logdash/__init__.py is the placeholder CI overwrites before packaging.
 import { execFileSync } from 'node:child_process'
 
 /** The next version after `last` (null before the first release), given the commit messages since it. */
