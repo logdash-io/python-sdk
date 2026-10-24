@@ -52,6 +52,24 @@ metrics.set("users", 0)
 metrics.mutate("users", 1)
 ```
 
+## Apps
+
+A domain key is shared by all apps of a domain, for example a desktop app, an API and a landing page.
+Set `app` to name this one, so the dashboard can filter logs and metrics by app.
+
+```python
+from logdash import create_logdash
+
+logdash = create_logdash({
+    "api_key": "<your-domain-key>",
+    # optional, sent with every log and metric
+    "app": "api",
+})
+```
+
+The app is created the first time it sends data.
+Older service keys ignore `app`.
+
 ## View
 
 To see the logs or metrics, go to your project dashboard
@@ -66,6 +84,13 @@ This project is licensed under the MIT License.
 ## Contributing
 
 Contributions are welcome! Feel free to open issues or submit pull requests.
+
+To run the tests:
+
+```bash
+pip install -e .
+python -m unittest discover -s tests
+```
 
 ## Support
 
