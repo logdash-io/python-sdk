@@ -10,15 +10,16 @@ from logdash.constants import LogLevel
 
 
 class logdash:
-    def __init__(self, api_key: Optional[str] = None, host: str = "https://api.logdash.io", verbose: bool = False):
+    def __init__(self, api_key: Optional[str] = None, host: str = "https://api.logdash.io", verbose: bool = False, app: Optional[str] = None):
         # Ensure we have an API key (or empty string)
         self._api_key = api_key or ""
         self._host = host
         self._verbose = verbose
-        
+        self._app = app
+
         # Create log sync and metrics instances
-        self._log_sync = create_log_sync(self._api_key, self._host, self._verbose)
-        self._metrics_instance = create_metrics(self._api_key, self._host, self._verbose)
+        self._log_sync = create_log_sync(self._api_key, self._host, self._verbose, self._app)
+        self._metrics_instance = create_metrics(self._api_key, self._host, self._verbose, self._app)
 
         # Initialize logger
         def on_log(level: LogLevel, message: str) -> None:
@@ -51,7 +52,8 @@ def create_logdash(params: Optional[Dict[str, Any]] = None) -> logdash:
                - api_key: Your logdash API key
                - host: logdash API host (defaults to https://api.logdash.io)
                - verbose: Enable verbose mode
-               
+               - app: Name of this app, sent with every log and metric (optional)
+
     Returns:
         A logdash instance with logger and metrics properties
     """
@@ -59,11 +61,13 @@ def create_logdash(params: Optional[Dict[str, Any]] = None) -> logdash:
     api_key = None
     host = "https://api.logdash.io"
     verbose = False
-    
+    app = None
+
     # Override with provided params if any
     if params is not None:
         api_key = params.get("api_key", api_key)
         host = params.get("host", host)
         verbose = params.get("verbose", verbose)
-    
-    return logdash(api_key, host, verbose) 
+        app = params.get("app", app)
+
+    return logdash(api_key, host, verbose, app)

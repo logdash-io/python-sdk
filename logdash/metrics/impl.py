@@ -1,3 +1,5 @@
+from typing import Optional
+
 import requests
 
 from logdash.metrics.base import BaseMetrics
@@ -6,10 +8,11 @@ from logdash.internal import internal_logger
 
 
 class Metrics(BaseMetrics):
-    def __init__(self, api_key: str, host: str, verbose: bool = False):
+    def __init__(self, api_key: str, host: str, verbose: bool = False, app: Optional[str] = None):
         self.api_key = api_key
         self.host = host
         self.verbose = verbose
+        self.app = app
 
     def set(self, name: str, value: float) -> None:
         """
@@ -53,6 +56,7 @@ class Metrics(BaseMetrics):
                     "name": name,
                     "value": value,
                     "operation": operation,
+                    **({"app": self.app} if self.app else {}),
                 },
                 timeout=5,  # Add timeout to prevent blocking
             )

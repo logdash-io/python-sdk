@@ -1,3 +1,5 @@
+from typing import Optional
+
 import requests
 
 from logdash.sync.base import LogSync
@@ -6,10 +8,11 @@ from logdash.constants import LogLevel
 
 class HttpLogSync(LogSync):
     
-    def __init__(self, api_key: str, host: str, verbose: bool = False):
+    def __init__(self, api_key: str, host: str, verbose: bool = False, app: Optional[str] = None):
         self.api_key = api_key
         self.host = host
         self.verbose = verbose
+        self.app = app
         self.sequence_number = 0
 
     def send(self, message: str, level: LogLevel, created_at: str) -> None:
@@ -28,6 +31,7 @@ class HttpLogSync(LogSync):
                     "level": level,
                     "createdAt": created_at,
                     "sequenceNumber": self.sequence_number,
+                    **({"app": self.app} if self.app else {}),
                 },
                 timeout=5,  # Add timeout to prevent blocking
             )
