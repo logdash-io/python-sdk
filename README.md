@@ -74,7 +74,9 @@ Pass `user_id` for signed-in users, so one person counts once across your websit
 Without it, Logdash counts a visitor of that app that changes every day.
 Never put personal data in `props`.
 
-Logs and events are sent in the background, and a script waits for them before it exits.
+## Flush
+
+Logs, metrics and events are sent in the background, and a script waits for them before it exits.
 Call `logdash.flush()` to wait for them sooner, for example before a serverless function returns.
 
 ## Apps
@@ -87,7 +89,7 @@ from logdash import create_logdash
 
 logdash = create_logdash({
     "api_key": "<your-domain-key>",
-    # optional, sent with every log and metric
+    # optional, sent with every log, metric and event
     "app": "api",
 })
 ```

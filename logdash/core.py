@@ -19,10 +19,10 @@ class logdash:
         self._app = app
 
         # Create log sync, metrics and events instances
-        self._log_sync = create_log_sync(self._api_key, self._host, self._verbose, self._app)
-        self._metrics_instance = create_metrics(self._api_key, self._host, self._verbose, self._app)
-        self._events = Events(self._api_key, self._host, self._verbose, self._app)
         self._sending: Set[threading.Thread] = set()
+        self._log_sync = create_log_sync(self._api_key, self._host, self._verbose, self._app)
+        self._metrics_instance = create_metrics(self._api_key, self._host, self._verbose, self._app, send_in_background=self._send_in_background)
+        self._events = Events(self._api_key, self._host, self._verbose, self._app)
 
         # Initialize logger
         def on_log(level: LogLevel, message: str) -> None:
@@ -54,18 +54,18 @@ class logdash:
             self._send_in_background(self._events.send, event)
 
     def flush(self) -> None:
-        """Wait for the logs and events still being sent in the background."""
+        """Wait for the logs, metrics and events still being sent in the background."""
         for thread in self._sending.copy():
             thread.join()
 
-    def _send_in_background(self, send: Callable[..., None], *args: Any) -> None:
+    def _send_in_background(self, send: Callable[..., None], *args: Any) -> bool:
         def run() -> None:
             try:
                 send(*args)
             finally:
                 self._sending.discard(thread)
 
-        # Not a daemon, so the interpreter delivers the last logs and events before it exits
+        # Not a daemon, so the interpreter delivers the last logs, metrics and events before it exits
         thread = threading.Thread(target=run, daemon=False)
         self._sending.add(thread)
         try:
@@ -73,6 +73,8 @@ class logdash:
         except RuntimeError:
             # No thread left to send it with: drop it rather than raise into the app
             self._sending.discard(thread)
+            return False
+        return True
 
 
 def create_logdash(params: Optional[Dict[str, Any]] = None) -> logdash:

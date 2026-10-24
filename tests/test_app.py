@@ -18,9 +18,10 @@ class TestApp(unittest.TestCase):
 
     def send_metrics(self, params):
         with mock.patch("requests.put") as put:
-            metrics = create_logdash(params).metrics
-            metrics.set("users", 1)
-            metrics.mutate("users", 1)
+            logdash = create_logdash(params)
+            logdash.metrics.set("users", 1)
+            logdash.metrics.mutate("logins", 1)
+            logdash.flush()
         return [call.kwargs["json"] for call in put.call_args_list]
 
     def test_logs_carry_app(self):
@@ -34,7 +35,7 @@ class TestApp(unittest.TestCase):
     def test_metrics_carry_app(self):
         self.assertEqual(self.send_metrics({"api_key": "key", "app": "api"}), [
             {"name": "users", "value": 1, "operation": "set", "app": "api"},
-            {"name": "users", "value": 1, "operation": "change", "app": "api"},
+            {"name": "logins", "value": 1, "operation": "change", "app": "api"},
         ])
 
     def test_metrics_leave_out_app_when_unset(self):
@@ -42,7 +43,7 @@ class TestApp(unittest.TestCase):
             with self.subTest(params=params):
                 self.assertEqual(self.send_metrics({"api_key": "key", **params}), [
                     {"name": "users", "value": 1, "operation": "set"},
-                    {"name": "users", "value": 1, "operation": "change"},
+                    {"name": "logins", "value": 1, "operation": "change"},
                 ])
 
 

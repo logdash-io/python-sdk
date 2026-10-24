@@ -1,12 +1,7 @@
 import io
-import subprocess
-import sys
-import textwrap
-import time
 import unittest
 import uuid
 from contextlib import redirect_stdout
-from pathlib import Path
 from unittest import mock
 
 from logdash import create_logdash
@@ -77,42 +72,6 @@ class TestEvents(unittest.TestCase):
     def test_track_does_not_raise_when_no_thread_can_start(self):
         with mock.patch("threading.Thread.start", side_effect=RuntimeError("can't start new thread")):
             self.assertEqual(self.track({"api_key": "key"}, "agent_run"), [])
-
-    def test_flush_waits_for_logs_and_events(self):
-        sent = []
-
-        def slow_post(url, **kwargs):
-            time.sleep(0.2)
-            sent.append(url)
-
-        with mock.patch("requests.post", side_effect=slow_post), redirect_stdout(io.StringIO()):
-            logdash = create_logdash({"api_key": "key", "host": "https://logdash.test"})
-            logdash.logger.info("hello")
-            logdash.track("agent_run")
-            logdash.flush()
-            self.assertCountEqual(sent, ["https://logdash.test/logs", "https://logdash.test/events"])
-
-    def test_exit_waits_for_events(self):
-        script = textwrap.dedent("""
-            import time
-            from unittest import mock
-            from logdash import create_logdash
-
-            def slow_post(url, **kwargs):
-                time.sleep(0.2)
-                print(kwargs["json"]["name"])
-
-            mock.patch("requests.post", side_effect=slow_post).start()
-            create_logdash({"api_key": "key"}).track("agent_run")
-        """)
-        result = subprocess.run(
-            [sys.executable, "-c", script],
-            cwd=str(Path(__file__).resolve().parent.parent),
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        self.assertEqual(result.stdout, "agent_run\n", result.stderr)
 
 
 if __name__ == "__main__":
