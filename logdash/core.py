@@ -1,7 +1,8 @@
 import threading
 from datetime import datetime, timezone
-from typing import Dict, Optional, Any
+from typing import Callable, Dict, Optional, Any, Set
 
+from logdash.events import EventProps, Events, UserId
 from logdash.logger import Logger
 from logdash.metrics.base import BaseMetrics
 from logdash.metrics.factory import create_metrics
@@ -17,19 +18,16 @@ class logdash:
         self._verbose = verbose
         self._app = app
 
-        # Create log sync and metrics instances
+        # Create log sync, metrics and events instances
+        self._sending: Set[threading.Thread] = set()
         self._log_sync = create_log_sync(self._api_key, self._host, self._verbose, self._app)
-        self._metrics_instance = create_metrics(self._api_key, self._host, self._verbose, self._app)
+        self._metrics_instance = create_metrics(self._api_key, self._host, self._verbose, self._app, send_in_background=self._send_in_background)
+        self._events = Events(self._api_key, self._host, self._verbose, self._app)
 
         # Initialize logger
         def on_log(level: LogLevel, message: str) -> None:
-            # Send log in background thread to avoid blocking
-            def send_log():
-                self._log_sync.send(message, level, datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'))
-            
-            thread = threading.Thread(target=send_log, daemon=True)
-            thread.start()
-            
+            self._send_in_background(self._log_sync.send, message, level, datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'))
+
         self._logger_instance = Logger(log_method=print, on_log=on_log)
     
     @property
@@ -42,20 +40,56 @@ class logdash:
         """Get the metrics instance."""
         return self._metrics_instance
 
+    def track(self, name: str, props: Optional[EventProps] = None, user_id: Optional[UserId] = None) -> None:
+        """
+        Track an event, such as a signup or an agent run, in the background.
+
+        Args:
+            name: The event name, matching [a-z][a-z0-9_]{0,63}
+            props: Up to 10 properties with string, number or boolean values, never personal data
+            user_id: The signed-in user's internal ID, never an email address
+        """
+        event = self._events.create(name, props, user_id)
+        if event is not None and self._api_key:
+            self._send_in_background(self._events.send, event)
+
+    def flush(self) -> None:
+        """Wait for the logs, metrics and events still being sent in the background."""
+        for thread in self._sending.copy():
+            thread.join()
+
+    def _send_in_background(self, send: Callable[..., None], *args: Any) -> bool:
+        def run() -> None:
+            try:
+                send(*args)
+            finally:
+                self._sending.discard(thread)
+
+        # Not a daemon, so the interpreter delivers the last logs, metrics and events before it exits
+        thread = threading.Thread(target=run, daemon=False)
+        self._sending.add(thread)
+        try:
+            thread.start()
+        except RuntimeError:
+            # No thread left to send it with: drop it rather than raise into the app
+            self._sending.discard(thread)
+            return False
+        return True
+
 
 def create_logdash(params: Optional[Dict[str, Any]] = None) -> logdash:
     """
-    Create a new logdash instance with logger and metrics.
+    Create a new logdash instance with logger, metrics and events.
     
     Args:
         params: Optional dictionary with configuration parameters:
                - api_key: Your logdash API key
                - host: logdash API host (defaults to https://api.logdash.io)
                - verbose: Enable verbose mode
-               - app: Name of this app, sent with every log and metric (optional)
+               - app: Name of this app, sent with every log, metric and event (optional)
 
     Returns:
-        A logdash instance with logger and metrics properties
+        A logdash instance with logger and metrics properties and track and flush methods
     """
     # Initialize with default values
     api_key = None

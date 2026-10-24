@@ -5,13 +5,13 @@ import os
 import time
 import pkg_resources
 
-print('=== LogDash SDK Demo ===')
-
 from logdash import create_logdash
+
+print('=== LogDash SDK Demo ===')
 
 try:
     logdash_version = pkg_resources.get_distribution("logdash").version
-except:
+except Exception:
     logdash_version = "unknown"
 print(f"Using logdash package version: {logdash_version}")
 print()

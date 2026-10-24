@@ -52,6 +52,33 @@ metrics.set("users", 0)
 metrics.mutate("users", 1)
 ```
 
+## Events
+
+```python
+from logdash import create_logdash
+
+logdash = create_logdash({
+    "api_key": "<your-api-key>",
+})
+
+logdash.track(
+    "agent_run",
+    props={"model": "opus", "tools": 3},
+    # the signed-in user's internal ID, never an email address
+    user_id="42",
+)
+```
+
+Events show up in your domain's Analytics as goals, with a daily trend.
+Pass `user_id` for signed-in users, so one person counts once across your website and apps.
+Without it, Logdash counts a visitor of that app that changes every day.
+Never put personal data in `props`.
+
+## Flush
+
+Logs, metrics and events are sent in the background, and a script waits for them before it exits.
+Call `logdash.flush()` to wait for them sooner, for example before a serverless function returns.
+
 ## Apps
 
 A domain key is shared by all apps of a domain, for example a desktop app, an API and a landing page.
@@ -62,7 +89,7 @@ from logdash import create_logdash
 
 logdash = create_logdash({
     "api_key": "<your-domain-key>",
-    # optional, sent with every log and metric
+    # optional, sent with every log, metric and event
     "app": "api",
 })
 ```
