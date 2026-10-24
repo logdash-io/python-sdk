@@ -9,6 +9,9 @@ echo "Generated seed: $LOGS_SEED"
 METRICS_SEED=$(awk 'BEGIN{srand(); print int(rand()*1000000)+1}')
 echo "Generated metrics seed: $METRICS_SEED"
 
+# Every SDK sends to the shared "SDK smoke tests" domain as its own app
+APP=python-sdk
+
 echo "Building LogDash demo Docker image (using published package ${LOGDASH_VERSION:-latest})..."
 docker build --no-cache --build-arg LOGDASH_VERSION="${LOGDASH_VERSION}" -t logdash-python-demo -f check-deployed-package/Dockerfile .
 
@@ -21,6 +24,7 @@ docker run --rm \
   -e LOGDASH_API_KEY="${LOGDASH_API_KEY}" \
   -e LOGS_SEED="${LOGS_SEED}" \
   -e METRICS_SEED="${METRICS_SEED}" \
+  -e LOGDASH_APP="${APP}" \
   logdash-python-demo
 
 echo
@@ -29,7 +33,7 @@ echo "Demo completed!"
 echo
 echo "Authenticating with LogDash API..."
 
-# Identify the project via the read-only personal API key (whoami).
+# Identify the domain via the read-only personal API key (whoami).
 # The ingest key (LOGDASH_API_KEY) is write-only and is no longer exchangeable for a token.
 TOKEN="${LOGDASH_PERSONAL_API_KEY}"
 AUTH_RESPONSE=$(curl -s -X 'GET' \
@@ -37,17 +41,17 @@ AUTH_RESPONSE=$(curl -s -X 'GET' \
   -H 'accept: application/json' \
   -H "Authorization: Bearer ${TOKEN}")
 
-# The key is scoped to a single project; whoami returns it under access.ids.
-PROJECT_ID=$(echo "$AUTH_RESPONSE" | grep -o '"ids":\["[^"]*"' | cut -d '"' -f 4)
+# The key is restricted to the one smoke-test domain; whoami returns it as access { kind: "clusters", ids: [domainId] }.
+DOMAIN_ID=$(echo "$AUTH_RESPONSE" | jq -r 'if .access.kind == "clusters" then .access.ids[0] // empty else empty end' 2>/dev/null)
 
-if [ -z "$TOKEN" ] || [ -z "$PROJECT_ID" ]; then
+if [ -z "$TOKEN" ] || [ -z "$DOMAIN_ID" ]; then
     echo "Error: Failed to authenticate with LogDash API"
-    echo "LOGDASH_PERSONAL_API_KEY must be a personal API key (ldp_) with logs:read and metrics:read, restricted to the smoke-test project"
+    echo "LOGDASH_PERSONAL_API_KEY must be a personal API key (ldp_) with logs:read and metrics:read, restricted to the \"SDK smoke tests\" domain"
     echo "Response: $AUTH_RESPONSE"
     exit 1
 fi
 
-echo "Authentication successful. Project ID: $PROJECT_ID"
+echo "Authentication successful. Domain ID: $DOMAIN_ID"
 
 # Expected log messages with seed
 EXPECTED_MESSAGES="This is an info log ${LOGS_SEED}
@@ -68,18 +72,18 @@ echo "Fetching logs and metrics from LogDash API..."
 # The backend stores what it receives about once a second, so read until all of it is there, for up to 30 seconds
 for _ in 1 2 3 4 5 6 7 8 9 10; do
     LOGS_RESPONSE=$(curl -s -X 'GET' \
-      "https://api.logdash.io/projects/${PROJECT_ID}/logs/v2?limit=100&searchString=${LOGS_SEED}" \
+      "https://api.logdash.io/clusters/${DOMAIN_ID}/logs?apps=${APP}&limit=100&searchString=${LOGS_SEED}" \
       -H 'accept: application/json' \
       -H "Authorization: Bearer ${TOKEN}")
     METRICS_RESPONSE=$(curl -s -X 'GET' \
-      "https://api.logdash.io/projects/${PROJECT_ID}/metrics" \
+      "https://api.logdash.io/clusters/${DOMAIN_ID}/metrics" \
       -H 'accept: application/json' \
       -H "Authorization: Bearer ${TOKEN}")
 
     MISSING_MESSAGES=$(echo "$EXPECTED_MESSAGES" | while IFS= read -r expected_msg; do
         echo "$LOGS_RESPONSE" | grep -q "$expected_msg" || echo "$expected_msg"
     done)
-    USERS_VALUE=$(echo "$METRICS_RESPONSE" | sed 's/},{/}\n{/g' | grep '"name":"users"' | grep -o '"value":[0-9]*' | sed 's/"value"://')
+    USERS_VALUE=$(echo "$METRICS_RESPONSE" | jq -r --arg app "$APP" '.[] | select(.app == $app and .name == "users") | .value' 2>/dev/null)
 
     [ -z "$MISSING_MESSAGES" ] && [ "$USERS_VALUE" = "$EXPECTED_USERS_VALUE" ] && break
     sleep 3
