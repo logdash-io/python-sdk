@@ -3,4 +3,5 @@ from logdash.logger import Logger
 from logdash.metrics import MetricOperation
 
 __all__ = ["create_logdash", "Logger", "MetricOperation"]
-__version__ = "1.1.0" 
+# A placeholder: CI writes the version it releases here before it builds the package
+__version__ = "0.0.0"

@@ -3,17 +3,13 @@
 
 import os
 import time
-import pkg_resources
+from importlib.metadata import version
 
 from logdash import create_logdash
 
 print('=== LogDash SDK Demo ===')
 
-try:
-    logdash_version = pkg_resources.get_distribution("logdash").version
-except Exception:
-    logdash_version = "unknown"
-print(f"Using logdash package version: {logdash_version}")
+print(f"Using logdash package version: {version('logdash')}")
 print()
 
 api_key = os.environ.get('LOGDASH_API_KEY')
